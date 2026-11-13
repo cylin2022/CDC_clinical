@@ -1,26 +1,25 @@
 # ClinMeta — 全離線臨床 Nanopore 病原體宏基因體分析平台
 
+![Platform](https://img.shields.io/badge/Platform-Oxford_Nanopore-2563eb)
+![Mode](https://img.shields.io/badge/Mode-100%25_Offline-16a34a)
+![Docker](https://img.shields.io/badge/Docker-lsbnb%2Fcdc--nanopore--offline-0ea5e9)
+
 **ClinMeta** 是一套專為臨床檢體（DNA + cDNA 雙庫或單庫）設計的 **100% 離線** Nanopore 宏基因體（mNGS）病原體檢測與驗證平台。從原始定序序列（FASTQ）出發，整合序列品管、人類宿主移除、物種分類、競爭性參考基因組回貼驗證、未知病毒遠緣篩檢與互動式 Web 視覺化報表，全程無須網際網路連線即可獨立運作。
 
 ---
 
 ## 分析流程架構
 
-```text
-Raw Nanopore FASTQ (DNA / cDNA)
-  │
-  ├─► 1. 品管過濾 (chopper: Q≥10, length≥200 bp, head/tail crop)
-  │
-  ├─► 2. 雙模式去宿主 (hostile: DNA map-ont / cDNA splice + human-masked index)
-  │
-  ├─► 3. 廣譜分類 (Kraken2 PlusPF + --memory-mapping / page-cache 預熱)
-  │
-  ├─► 4. 離線競爭性回貼驗證 (minimap2 --secondary=no: human-masked + 69 組病原面板)
-  │       └─► 計算 MAPQ≥20 reads、基因組覆蓋廣度 (Breadth %)、平均深度 (Mean Depth)
-  │
-  ├─► 5. 未知／遠緣病毒篩檢 (TSO/SSP primer 排除 + DIAMOND blastx viral_refseq_prot)
-  │
-  └─► 6. 互動式報告與 PDF／TSV／CSV 匯出
+```mermaid
+flowchart LR
+  A["Raw Nanopore FASTQ\n(DNA / cDNA)"] --> B["1. chopper QC\n(Q≥10, ≥200 bp)"]
+  B --> C["2. hostile 去宿主\n(DNA map-ont / cDNA splice)"]
+  C --> D["3. Kraken2 PlusPF\n(Broad Classification)"]
+  C --> E["4. 離線競爭性回貼驗證\n(minimap2 + 69 組病原面板)"]
+  E --> F["5. 未知病毒蛋白篩檢\n(DIAMOND blastx)"]
+  D --> G["6. 互動式 Web 報告\nSankey / 驗證 / PDF / 群體統計"]
+  E --> G
+  F --> G
 ```
 
 ---
