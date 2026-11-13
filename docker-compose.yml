@@ -1,0 +1,19 @@
+services:
+  cdc-nanopore-web:
+    build: .
+    container_name: cdc-nanopore-offline
+    ports:
+      - "8080:8080"
+    environment:
+      - CDC_ZENODO_BUNDLE_URL=
+      - CDC_ZENODO_BUNDLE_SHA256=
+      - CDC_AUTO_DOWNLOAD_K2=false
+    volumes:
+      - ./data/databases:/data/databases
+      - ./data/references:/data/references
+      - ./data/input:/data/input:ro
+      - ./data/output:/data/output
+      - ./analysis:/app/analysis:ro
+      - ./clean_results:/app/clean_results:ro
+    restart: unless-stopped
+

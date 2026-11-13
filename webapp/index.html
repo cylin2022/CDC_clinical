@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClinMeta — Clinical mNGS Pathogen Analysis</title>
+<style>
+  :root {
+    --bg: #f1f5f9; --sidebar: #0f172a; --card: #ffffff; --border: #e2e8f0;
+    --text: #0f172a; --muted: #64748b; --primary: #2563eb; --green: #16a34a;
+    --amber: #d97706; --red: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+  .sidebar { width: 250px; background: var(--sidebar); color: #e2e8f0; padding: 22px 16px; display: flex; flex-direction: column; flex-shrink: 0; }
+  .brand { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .brand-sub { font-size: 12px; color: #94a3b8; margin-bottom: 24px; }
+  .nav-btn { background: transparent; border: none; color: #cbd5e1; text-align: left; padding: 11px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 6px; transition: 0.15s; }
+  .nav-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-btn.active { background: var(--primary); color: #fff; }
+  .offline-pill { margin-top: auto; background: rgba(22,163,74,0.15); border: 1px solid rgba(22,163,74,0.4); color: #86efac; padding: 10px 12px; border-radius: 8px; font-size: 12px; }
+  .main { flex: 1; padding: 26px 30px; overflow-y: auto; max-width: 1400px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 13.5px; margin-bottom: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 22px; }
+  .card { background: var(--card); border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(15,23,42,0.06); border: 1px solid var(--border); }
+  .card-title { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  .card-val { font-size: 22px; font-weight: 700; margin: 6px 0 4px; }
+  .panel { background: var(--card); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(15,23,42,0.06); border: 1px solid var(--border); }
+  .panel h2 { font-size: 17px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  th { background: #f8fafc; font-weight: 600; color: #334155; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { background: #e2e8f0; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .b-ok { background: #dcfce7; color: #166534; }
+  .b-run { background: #dbeafe; color: #1e40af; }
+  .b-wait { background: #fef3c7; color: #92400e; }
+  .b-err { background: #fee2e2; color: #991b1b; }
+  .tip-wrap { position: relative; display: inline-block; cursor: help; }
+  .tip-box { display: none; position: absolute; left: 0; top: 120%; z-index: 50; min-width: 260px; max-width: 420px; background: #0f172a; color: #f8fafc; padding: 8px 10px; border-radius: 7px; font-size: 12px; font-weight: 400; line-height: 1.45; white-space: pre-wrap; word-break: break-word; box-shadow: 0 8px 24px rgba(15,23,42,0.28); pointer-events: none; }
+  .tip-wrap:hover .tip-box { display: block; }
+  .btn { background: var(--primary); color: #fff; border: none; padding: 8px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn:hover { opacity: 0.92; }
+  .btn-sm { padding: 4px 9px; font-size: 12px; }
+  .btn-ghost { background: #f1f5f9; color: #334155; border: 1px solid var(--border); }
+  .btn-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .row-flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  input, select { padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab-btn { background: #e2e8f0; color: #334155; border: none; padding: 8px 14px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .tab-btn.active { background: #0f172a; color: #fff; }
+  iframe.report-frame { width: 100%; min-height: 500px; border: 1px solid var(--border); border-radius: 8px; background: #fff; overflow: hidden; display: block; }
+  .hidden { display: none; }
+  .prog-bar { width: 110px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .prog-fill { height: 100%; background: var(--primary); }
+  code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 12px; }
+  .ico { width: 15px; height: 15px; vertical-align: -2.5px; margin-right: 5px; flex-shrink: 0; display: inline-block; }
+  .ico-lg { width: 18px; height: 18px; vertical-align: -3.5px; margin-right: 7px; display: inline-block; }
+  .nav-btn, .btn, .tab-btn { display: inline-flex; align-items: center; gap: 6px; }
+  .btn-icon { padding: 5px 8px; gap: 0; justify-content: center; }
+  .btn-icon .ico { margin-right: 0; }
+  .nav-btn { width: 100%; }
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div style="margin-bottom:20px;text-align:center;">
+      <img src="/assets/clinmeta-logo-dark.jpg" alt="ClinMeta Logo" style="width:100%;max-width:215px;border-radius:8px;display:block;margin:0 auto;">
+    </div>
+    <div class="brand-sub" style="text-align:center;margin-bottom:20px;">全離線臨床病原體分析平台</div>
+    <button class="nav-btn active" onclick="showView('overview', this)"><svg class="ico-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>總覽與離線資料庫</button>
+    <button class="nav-btn" onclick="showView('queue', this)"><svg class="ico-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>多樣本輸入與排程</button>
+    <button class="nav-btn" onclick="showView('results', this)"><svg class="ico-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-5 4 3 5-7"/></svg>歷史結果再檢視</button>
+    <div class="offline-pill">
+      <strong>● 全離線模式就緒</strong><br>
+      無須網際網路連線即可執行 QC、去宿主、Kraken2、競爭回貼與 DIAMOND 未知病毒篩檢。
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- VIEW 1: OVERVIEW -->
+    <section id="view-overview">
+      <h1>平台總覽與離線環境狀態</h1>
+      <div class="subtitle">外掛資料庫、參考索引與樣本輸出目錄狀態</div>
+
+      <div class="grid" id="summary-cards"></div>
+
+      <div class="panel">
+        <h2><span><svg class="ico-lg" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>離線資料庫與參考索引檢查</span> <button class="btn btn-sm btn-ghost" onclick="loadAll()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>重新檢查</button></h2>
+        <table>
+          <thead><tr><th>組件名稱</th><th>用途與收錄說明</th><th>狀態</th><th>磁碟容量</th></tr></thead>
+          <tbody id="db-table"></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>標準外掛目錄結構（Docker Volume 介面）</h2>
+        <table>
+          <thead><tr><th>用途</th><th>掛載路徑 / 目錄規範</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td><strong>輸入檢體目錄</strong></td><td><code id="cfg-input-dir"></code></td><td>每個樣本一個子目錄：<code>&lt;sample_id&gt;/dna/*.fastq.gz</code> 與 <code>&lt;sample_id&gt;/cdna/*.fastq.gz</code></td></tr>
+            <tr><td><strong>輸出結果目錄</strong></td><td><code id="cfg-output-dir"></code></td><td>保存排程資料庫（<code>jobs.db</code>）與各樣本之 BAM、FASTQ、Sankey 與 HTML 報告</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW 2: QUEUE -->
+    <section id="view-queue" class="hidden">
+      <h1>多樣本輸入掃描與 FIFO 排程分析</h1>
+      <div class="subtitle">從外掛輸入目錄自動掃描樣本的 DNA 與 cDNA 序列，依序排程執行</div>
+
+      <div class="panel">
+        <h2><span><svg class="ico-lg" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>外掛輸入目錄掃描</span>
+          <span class="row-flex">
+            <input id="scan-dir-input" placeholder="輸入目錄路徑" style="min-width:280px;font-weight:400;">
+            <button class="btn btn-sm btn-ghost" onclick="openBrowser('scan-dir-input', 'dir')"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>瀏覽目錄</button>
+            <button class="btn btn-sm" onclick="scanInputs()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>掃描此目錄</button>
+          </span>
+        </h2>
+        <div id="scan-empty" class="subtitle hidden">目前目錄尚無符合之樣本資料夾。您可切換上方自選目錄，或直接於下方手動瀏覽載入 DNA / cDNA 檔案或目錄。</div>
+        <table id="scan-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="chk-all" onchange="toggleAllInputs(this)"></th>
+              <th>Sample ID</th><th>DNA 檔案</th><th>cDNA 檔案</th><th>檢體類型</th><th title="每個分析工作預計分配的 CPU 執行緒數（多筆平行時會自動動態調配）">CPU Threads</th>
+            </tr>
+          </thead>
+          <tbody id="scan-tbody"></tbody>
+        </table>
+        <div style="margin-top:14px;" class="row-flex">
+          <button class="btn" onclick="submitSelected()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>加入分析排程佇列</button>
+          <span id="submit-msg" style="font-size:13px;color:var(--green);"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>手動新增樣本至排程（瀏覽系統自選目錄／檔案）</h2>
+        <div class="row-flex">
+          <input id="man-sid" placeholder="Sample ID (例: sample_002)" style="width:170px;">
+          <input id="man-dna" placeholder="DNA FASTQ 目錄或檔案路徑" style="min-width:230px;flex:1;">
+          <button class="btn btn-sm btn-ghost" onclick="openBrowser('man-dna', 'any')">瀏覽 DNA...</button>
+          <input id="man-cdna" placeholder="cDNA FASTQ 目錄或檔案路徑" style="min-width:230px;flex:1;">
+          <button class="btn btn-sm btn-ghost" onclick="openBrowser('man-cdna', 'any')">瀏覽 cDNA...</button>
+          <input id="man-spec" placeholder="檢體類型" value="respiratory" style="width:120px;">
+          <input id="man-thr" type="number" value="16" style="width:72px;" title="CPU Threads">
+          <button class="btn btn-icon" onclick="submitManual()" title="加入佇列"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>分析排程佇列與即時進度 <button class="btn btn-sm btn-ghost btn-icon" onclick="loadJobs()" title="重新整理"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button></h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Sample ID</th><th>檢體</th><th>狀態</th><th>目前階段 / 進度</th><th>時間戳記 (送件 / 開始 / 完成)</th><th>主要檢出摘要</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW 3: RESULTS -->
+    <section id="view-results" class="hidden">
+      <h1>批次篩選、統計與分析結果報表</h1>
+      <div class="subtitle">支援數千筆樣本之時間區間與檢出結果篩選、群體統計摘要、報表匯出及單一樣本詳細報告檢視</div>
+
+      <div class="panel">
+        <h2><span><svg class="ico-lg" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>多條件篩選與報表產出</span>
+          <div class="row-flex">
+            <button class="btn btn-sm btn-ghost" onclick="exportCohortReport('csv')"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>匯出 CSV</button>
+            <button class="btn btn-sm btn-ghost" onclick="exportCohortReport('tsv')"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>匯出 TSV</button>
+            <button class="btn btn-sm" onclick="exportCohortReport('html')"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>產出統計報告 (HTML)</button>
+          </div>
+        </h2>
+        <div class="row-flex" style="margin-bottom:10px;">
+          <input id="f-q" type="search" placeholder="搜尋 Sample ID / 病原名稱..." style="min-width:220px;" oninput="debouncedQueryResults()">
+          <label style="font-size:12px;">起日 <input id="f-from" type="date" onchange="queryResults(1)"></label>
+          <label style="font-size:12px;">迄日 <input id="f-to" type="date" onchange="queryResults(1)"></label>
+          <select id="f-specimen" onchange="queryResults(1)"><option value="all">檢體：全部</option></select>
+          <select id="f-finding" onchange="queryResults(1)">
+            <option value="all">結果：全部</option>
+            <option value="positive">僅看檢出陽性病原</option>
+            <option value="negative">未檢出主要病原</option>
+            <option value="Influenza">含 Influenza (流感)</option>
+            <option value="Candida">含 Candida (念珠菌)</option>
+            <option value="Klebsiella">含 Klebsiella</option>
+            <option value="Pseudomonas">含 Pseudomonas</option>
+          </select>
+          <select id="f-status" onchange="queryResults(1)">
+            <option value="completed">狀態：僅已完成</option>
+            <option value="all">狀態：全部</option>
+            <option value="failed">狀態：僅失敗</option>
+          </select>
+          <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="避免相同 Sample ID 重複送件導致陽性率與統計被重複計算">
+            <input id="f-dedup" type="checkbox" checked onchange="queryResults(1)"> 同一 Sample ID 去重（僅計最新）
+          </label>
+          <button class="btn btn-sm btn-ghost" onclick="resetResultFilters()">重設</button>
+        </div>
+      </div>
+
+      <div id="cohort-stats-cards" class="grid"></div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr;">
+        <div class="panel" style="margin-bottom:0;">
+          <h2>主要檢出病原統計 (點擊可快篩)</h2>
+          <div id="cohort-pathogens" style="font-size:12.5px;"></div>
+        </div>
+        <div class="panel" style="margin-bottom:0;">
+          <h2>分析量與陽性趨勢統計
+            <span class="row-flex">
+              <button class="btn btn-sm" id="gran-day" onclick="setTrendGranularity('day')">按日</button>
+              <button class="btn btn-sm btn-ghost" id="gran-week" onclick="setTrendGranularity('week')">按週</button>
+              <button class="btn btn-sm btn-ghost" id="gran-month" onclick="setTrendGranularity('month')">按月</button>
+            </span>
+          </h2>
+          <div id="cohort-daily" style="font-size:12.5px;max-height:260px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px;">
+        <h2>符合條件之樣本清單 <span id="res-match-info" style="font-size:13px;font-weight:500;color:var(--muted);"></span></h2>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Sample ID</th><th>檢體</th><th>狀態</th><th>送件 / 完成時間</th><th>主要檢出摘要</th><th>操作</th></tr>
+          </thead>
+          <tbody id="res-tbody"></tbody>
+        </table>
+        <div class="row-flex" style="margin-top:12px;justify-content:space-between;">
+          <div id="res-page-info" style="font-size:12.5px;color:var(--muted);"></div>
+          <div class="row-flex">
+            <button class="btn btn-sm btn-ghost" onclick="changeResPage(-1)">上一頁</button>
+            <button class="btn btn-sm btn-ghost" onclick="changeResPage(1)">下一頁</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="res-body" class="hidden">
+        <div class="panel">
+          <div class="row-flex">
+            <strong id="res-active-title">單一樣本報告</strong>
+            <div id="download-links" class="row-flex" style="margin-left:auto;"></div>
+            <button class="btn btn-sm btn-ghost" onclick="closeSampleResult()">關閉報告</button>
+          </div>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchReportTab('sankey', this)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h6l6 12h6"/><path d="M3 18h6l6-12h6"/></svg>1. 全序列 Sankey 判定圖</button>
+          <button class="tab-btn" onclick="switchReportTab('validation', this)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>2. 病原體競爭回貼報告</button>
+          <button class="tab-btn" onclick="switchReportTab('kraken2', this)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.36 6.36"/></svg>3. Kraken2 分類報告</button>
+          <button class="tab-btn" onclick="switchReportTab('tables', this)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>4. 判定明細表與未知病毒篩檢</button>
+        </div>
+
+        <div id="rtab-sankey" class="panel"><iframe id="frame-sankey" class="report-frame" scrolling="no" onload="autoResizeFrame(this)"></iframe></div>
+        <div id="rtab-validation" class="panel hidden"><iframe id="frame-validation" class="report-frame" scrolling="no" onload="autoResizeFrame(this)"></iframe></div>
+        <div id="rtab-kraken2" class="panel hidden"><iframe id="frame-kraken2" class="report-frame" scrolling="no" onload="autoResizeFrame(this)"></iframe></div>
+        <div id="rtab-tables" class="panel hidden">
+          <h2>全序列判定快速閱讀摘要</h2>
+          <div id="disp-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px;"></div>
+          <h2>全序列互斥最終判定表</h2>
+          <table id="disp-table"></table>
+          <h2 style="margin-top:24px;">DIAMOND 未知病毒蛋白遠緣搜尋（Top Hits）</h2>
+          <p class="muted" style="margin:-4px 0 10px;font-size:12.5px;">針對未比對至病原體面板且非 Kraken2 已知分類之讀段進行蛋白序列比對，用以排除潛在新型或遠緣病毒。</p>
+          <table id="unk-table"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- DIRECTORY / FILE BROWSER MODAL -->
+  <div id="browse-modal" class="hidden" style="position:fixed;inset:0;background:rgba(15,23,42,0.55);display:none;align-items:center;justify-content:center;z-index:999;">
+    <div style="background:#fff;border-radius:12px;width:90%;max-width:780px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.25);">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <strong>選擇系統目錄或 FASTQ 檔案</strong>
+        <button class="btn btn-sm btn-ghost" onclick="closeBrowser()">關閉</button>
+      </div>
+      <div style="padding:10px 18px;background:#f8fafc;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;" id="browse-shortcuts"></div>
+      <div style="padding:10px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm btn-ghost" onclick="browseGoParent()">↑ 上一層</button>
+        <input id="browse-cur-path" style="flex:1;font-family:monospace;font-size:12.5px;" onkeydown="if(event.key==='Enter') browseLoad(this.value)">
+        <button class="btn btn-sm btn-ghost" onclick="browseLoad(document.getElementById('browse-cur-path').value)">前往</button>
+        <button class="btn btn-sm" onclick="selectBrowsePath(document.getElementById('browse-cur-path').value)">選擇此目錄</button>
+      </div>
+      <div id="browse-list" style="padding:12px 18px;overflow-y:auto;flex:1;font-size:13px;"></div>
+    </div>
+  </div>
+
+<script>
+let jobsCache = [];
+let scannedCache = [];
+
+function showView(name, btn) {
+  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('view-' + name).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (name === 'results') populateResultSelector();
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function statusBadge(st, errMsg) {
+  if (st === 'completed') return '<span class="badge b-ok">已完成</span>';
+  if (st === 'running') return '<span class="badge b-run">執行中</span>';
+  if (st === 'queued') return '<span class="badge b-wait">排隊中</span>';
+  if (st === 'failed') {
+    const tip = escHtml((errMsg || '執行失敗（未提供詳細錯誤訊息）').trim());
+    return `<span class="tip-wrap"><span class="badge b-err" title="${tip}">失敗 ⓘ</span><span class="tip-box"><strong>失敗原因：</strong><br>${tip}</span></span>`;
+  }
+  return `<span class="badge b-err">${escHtml(st)}</span>`;
+}
+
+async function loadHealth() {
+  const res = await fetch('/api/health').then(r => r.json());
+  document.getElementById('cfg-input-dir').textContent = res.input_dir;
+  document.getElementById('cfg-output-dir').textContent = res.output_dir;
+  document.getElementById('db-table').innerHTML = res.databases.map(d => {
+    const catBtn = d.has_catalog
+      ? `<div style="margin-top:6px;"><button class="btn btn-sm" onclick="openPanelCatalog()">查看參考基因組表列清單</button>
+         <a class="btn btn-sm btn-ghost" href="/files/references/pathogen_panel/PANEL_CATALOG.tsv" download>下載 TSV</a>
+         <a class="btn btn-sm btn-ghost" href="/files/references/pathogen_panel/PANEL_CATALOG.md" download>下載 MD</a></div>`
+      : '';
+    return `<tr>
+      <td><strong>${d.name}</strong></td>
+      <td style="font-size:12.5px;color:#334155;max-width:560px;">${d.description || ''}${catBtn}</td>
+      <td>${d.ready ? '<span class="badge b-ok" title="就緒" style="display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>' : '<span class="badge b-err" title="缺失" style="display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>'}</td>
+      <td><code>${d.size}</code></td>
+    </tr>`;
+  }).join('');
+}
+
+function fmtTs(ts) {
+  if (!ts) return '-';
+  return ts.replace('T', ' ').replace(/[+-]\d{4}$/, '');
+}
+
+async function loadJobs() {
+  const [res, rsrc] = await Promise.all([
+    fetch('/api/jobs').then(r => r.json()),
+    fetch('/api/resources').then(r => r.json()).catch(() => null),
+  ]);
+  jobsCache = res.jobs || [];
+  const completed = jobsCache.filter(j => j.status === 'completed').length;
+  const running = jobsCache.filter(j => j.status === 'running').length;
+  const queued = jobsCache.filter(j => j.status === 'queued').length;
+  const resText = rsrc ? `${rsrc.resources.cpu_cores} 核心 · ${rsrc.resources.mem_available_gb} GB 可用 (上限 ${rsrc.max_workers} 平行)` : '100% 離線';
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="card"><div class="card-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>已完成樣本</div><div class="card-val">${completed}</div></div>
+    <div class="card"><div class="card-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>執行中</div><div class="card-val">${running}</div></div>
+    <div class="card"><div class="card-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>排程等待中</div><div class="card-val">${queued}</div></div>
+    <div class="card"><div class="card-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>CPU / RAM 資源優化器</div><div class="card-val" style="font-size:14px;color:var(--green);">${resText}</div></div>
+  `;
+
+  const icoEye = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const icoTrash = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+  const icoRetry = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+  const icoX = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+  document.getElementById('jobs-tbody').innerHTML = jobsCache.map(j => {
+    let ops = '';
+    if (j.status === 'queued') {
+      ops = `<button class="btn btn-sm btn-ghost btn-icon" onclick="reorderJob(${j.id},'up')" title="提高優先順序">↑</button>
+             <button class="btn btn-sm btn-ghost btn-icon" onclick="reorderJob(${j.id},'down')" title="降低優先順序">↓</button>
+             <button class="btn btn-sm btn-danger btn-icon" onclick="cancelJob(${j.id})" title="取消排程">${icoX}</button>`;
+    } else if (j.status === 'completed') {
+      ops = `<button class="btn btn-sm btn-icon" onclick="openResult('${j.id}')" title="檢視結果">${icoEye}</button>
+             <button class="btn btn-sm btn-danger btn-icon" onclick="deleteJob(${j.id},'${escHtml(j.sample_id)}')" title="刪除">${icoTrash}</button>`;
+    } else if (j.status === 'failed' || j.status === 'cancelled') {
+      ops = `<button class="btn btn-sm btn-ghost btn-icon" onclick="retryJob(${j.id})" title="重試">${icoRetry}</button>
+             <button class="btn btn-sm btn-danger btn-icon" onclick="deleteJob(${j.id},'${escHtml(j.sample_id)}')" title="刪除">${icoTrash}</button>`;
+    }
+    const tsHtml = `<div style="font-size:11px;line-height:1.4;color:#475569;">送: ${fmtTs(j.created_at)}<br>始: ${fmtTs(j.started_at)}<br>完: ${fmtTs(j.finished_at)}</div>`;
+    return `<tr>
+      <td>${j.id}</td>
+      <td><strong>${j.sample_id}</strong></td>
+      <td>${j.specimen_type || ''}</td>
+      <td>${statusBadge(j.status, j.error_msg)}</td>
+      <td><div class="prog-bar"><div class="prog-fill" style="width:${j.progress_pct}%"></div></div>${j.stage} (${j.progress_pct}%)</td>
+      <td>${tsHtml}</td>
+      <td style="font-size:12px;">${j.primary_finding || j.error_msg || '-'}</td>
+      <td><div style="display:inline-flex;gap:6px;white-space:nowrap;">${ops}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+async function scanInputs() {
+  const dirInput = document.getElementById('scan-dir-input');
+  const q = dirInput.value.trim() ? ('?dir=' + encodeURIComponent(dirInput.value.trim())) : '';
+  const res = await fetch('/api/input-scan' + q).then(r => r.json());
+  if (!dirInput.value.trim() && res.input_dir) dirInput.value = res.input_dir;
+  scannedCache = res.samples || [];
+  const empty = document.getElementById('scan-empty');
+  const tbl = document.getElementById('scan-table');
+  if (!scannedCache.length) {
+    empty.classList.remove('hidden');
+    tbl.classList.add('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tbl.classList.remove('hidden');
+  document.getElementById('scan-tbody').innerHTML = scannedCache.map((s, i) => `
+    <tr>
+      <td><input type="checkbox" class="inp-chk" data-idx="${i}" checked></td>
+      <td><strong>${s.sample_id}</strong></td>
+      <td style="font-size:12px;">${s.dna_files.length ? s.dna_files.join(', ') : '<span style="color:#94a3b8;">無</span>'}</td>
+      <td style="font-size:12px;">${s.cdna_files.length ? s.cdna_files.join(', ') : '<span style="color:#94a3b8;">無</span>'}</td>
+      <td><input id="spec-${i}" value="respiratory" style="width:120px;"></td>
+      <td><input id="thr-${i}" type="number" value="16" style="width:70px;"></td>
+    </tr>
+  `).join('');
+}
+
+function toggleAllInputs(master) {
+  document.querySelectorAll('.inp-chk').forEach(c => c.checked = master.checked);
+}
+
+async function submitSelected() {
+  const items = [];
+  document.querySelectorAll('.inp-chk:checked').forEach(c => {
+    const i = parseInt(c.dataset.idx);
+    const s = scannedCache[i];
+    items.push({
+      sample_id: s.sample_id,
+      dna_path: s.dna_path,
+      cdna_path: s.cdna_path,
+      specimen_type: document.getElementById('spec-' + i).value,
+      threads: parseInt(document.getElementById('thr-' + i).value || '16'),
+    });
+  });
+  if (!items.length) return;
+  await fetch('/api/jobs', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({samples: items}) });
+  document.getElementById('submit-msg').textContent = `已加入 ${items.length} 筆樣本至排程佇列`;
+  loadJobs();
+}
+
+async function submitManual() {
+  const sid = document.getElementById('man-sid').value.trim();
+  if (!sid) return alert('請輸入 Sample ID');
+  await fetch('/api/jobs', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      sample_id: sid,
+      dna_path: document.getElementById('man-dna').value.trim(),
+      cdna_path: document.getElementById('man-cdna').value.trim(),
+      specimen_type: document.getElementById('man-spec').value.trim(),
+      threads: parseInt(document.getElementById('man-thr').value || '16'),
+    })
+  });
+  loadJobs();
+}
+
+async function reorderJob(id, direction) {
+  await fetch('/api/jobs/reorder', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, direction}) });
+  loadJobs();
+}
+
+async function cancelJob(id) {
+  await fetch(`/api/jobs/${id}/cancel`, { method:'POST' });
+  loadJobs();
+}
+
+async function retryJob(id) {
+  await fetch(`/api/jobs/${id}/retry`, { method:'POST' });
+  loadJobs();
+}
+
+async function deleteJob(id, sampleId) {
+  if (!confirm(`確定要刪除 #${id} ${sampleId} 嗎？（將移除此筆分析紀錄與對應輸出資料夾）`)) return;
+  const res = await fetch(`/api/jobs/${id}/delete`, { method:'POST' }).then(r => r.json());
+  if (res.error) { alert(res.error); return; }
+  if (String(activeResultJobId) === String(id)) closeSampleResult();
+  await loadJobs();
+  if (!document.getElementById('view-results').classList.contains('hidden')) {
+    await queryResults(resPage);
+  }
+}
+
+let resPage = 1, resTotalPages = 1, resTimer = null, activeResultJobId = null, trendGran = 'day', lastByPeriod = {};
+
+function setTrendGranularity(g) {
+  trendGran = g;
+  ['day', 'week', 'month'].forEach(k => {
+    const b = document.getElementById('gran-' + k);
+    if (b) b.className = 'btn btn-sm' + (k === g ? '' : ' btn-ghost');
+  });
+  renderTrendPanel();
+}
+
+function filterByPeriod(df, dt) {
+  const f = document.getElementById('f-from'), t = document.getElementById('f-to');
+  if (f.value === df && t.value === dt) {
+    f.value = ''; t.value = '';
+  } else {
+    f.value = df; t.value = dt;
+  }
+  queryResults(1);
+}
+
+function renderTrendPanel() {
+  const list = (lastByPeriod && lastByPeriod[trendGran]) || [];
+  const el = document.getElementById('cohort-daily');
+  if (!list.length) { el.innerHTML = '<span style="color:var(--muted);">無資料</span>'; return; }
+  const maxTot = Math.max(...list.map(d => d.total), 1);
+  const fVal = document.getElementById('f-from').value, tVal = document.getElementById('f-to').value;
+  el.innerHTML = list.map(d => {
+    const posW = Math.round(100 * d.positive / maxTot);
+    const negW = Math.round(100 * d.negative / maxTot);
+    const active = fVal && tVal && fVal === d.date_from && tVal === d.date_to;
+    const clickAttr = d.date_from ? `onclick="filterByPeriod('${d.date_from}','${d.date_to}')"` : '';
+    return `<div style="margin-bottom:8px;cursor:pointer;padding:4px 6px;border-radius:6px;${active ? 'background:#eff6ff;outline:1px solid var(--primary);' : ''}" ${clickAttr} title="點擊篩選此區間">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span><strong>${d.period}</strong>${active ? ' <span class="badge b-run">已篩選</span>' : ''}</span>
+        <span>總 ${d.total} · <span style="color:var(--primary);font-weight:600;">陽 ${d.positive}</span> · 未檢出 ${d.negative}（${d.positive_rate_pct}%）</span>
+      </div>
+      <div style="display:flex;height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin-top:3px;">
+        <div style="width:${posW}%;background:var(--primary);" title="陽性 ${d.positive}"></div>
+        <div style="width:${negW}%;background:#94a3b8;" title="未檢出 ${d.negative}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeSampleResult() {
+  activeResultJobId = null;
+  document.getElementById('res-body').classList.add('hidden');
+  document.getElementById('frame-sankey').src = 'about:blank';
+  document.getElementById('frame-validation').src = 'about:blank';
+  document.getElementById('frame-kraken2').src = 'about:blank';
+}
+
+function openResult(jid) {
+  document.querySelectorAll('.nav-btn')[2].click();
+  loadSampleResult(jid);
+}
+
+function populateResultSelector() {
+  queryResults(resPage);
+}
+
+function debouncedQueryResults() {
+  clearTimeout(resTimer);
+  resTimer = setTimeout(() => queryResults(1), 220);
+}
+
+function resetResultFilters() {
+  document.getElementById('f-q').value = '';
+  document.getElementById('f-from').value = '';
+  document.getElementById('f-to').value = '';
+  document.getElementById('f-specimen').value = 'all';
+  document.getElementById('f-finding').value = 'all';
+  document.getElementById('f-status').value = 'completed';
+  queryResults(1);
+}
+
+function filterByPathogen(name) {
+  const qEl = document.getElementById('f-q');
+  const fEl = document.getElementById('f-finding');
+  if (qEl.value.trim().toLowerCase() === name.toLowerCase()) {
+    qEl.value = '';
+  } else {
+    qEl.value = name;
+    if (!['all', 'positive', 'negative'].includes(fEl.value)) {
+      fEl.value = 'all';
+    }
+  }
+  queryResults(1);
+}
+
+function buildResultQueryParams(page) {
+  const p = new URLSearchParams({
+    q: document.getElementById('f-q').value.trim(),
+    date_from: document.getElementById('f-from').value,
+    date_to: document.getElementById('f-to').value,
+    specimen: document.getElementById('f-specimen').value,
+    finding: document.getElementById('f-finding').value,
+    status: document.getElementById('f-status').value,
+    dedup: document.getElementById('f-dedup')?.checked ? '1' : '0',
+    page: String(page),
+    page_size: '25',
+  });
+  return p.toString();
+}
+
+function exportCohortReport(fmt, forceDownload) {
+  const qs = buildResultQueryParams(1);
+  if (fmt === 'html' && !forceDownload) {
+    openCohortModal(qs);
+    return;
+  }
+  window.location.href = `/api/results-export?${qs}&format=${encodeURIComponent(fmt)}`;
+}
+
+function openCohortModal(qs) {
+  const m = document.getElementById('cohort-modal');
+  const fr = document.getElementById('cohort-modal-frame');
+  fr.src = `/api/results-export?${qs}&format=html&inline=1`;
+  m.style.display = 'flex';
+}
+
+function closeCohortModal() {
+  document.getElementById('cohort-modal').style.display = 'none';
+  document.getElementById('cohort-modal-frame').src = 'about:blank';
+}
+
+function changeResPage(delta) {
+  const np = resPage + delta;
+  if (np >= 1 && np <= resTotalPages) queryResults(np);
+}
+
+async function queryResults(page = 1) {
+  resPage = page;
+  const res = await fetch('/api/results-query?' + buildResultQueryParams(page)).then(r => r.json());
+  resTotalPages = res.total_pages || 1;
+  const st = res.stats || {};
+
+  // Update specimen dropdown options dynamically while preserving selection
+  const spSel = document.getElementById('f-specimen');
+  const curSp = spSel.value;
+  spSel.innerHTML = '<option value="all">檢體：全部</option>' +
+    (res.specimens_available || []).map(s => `<option value="${s}">檢體：${s}</option>`).join('');
+  if ([...spSel.options].some(o => o.value === curSp)) spSel.value = curSp;
+
+  document.getElementById('cohort-stats-cards').innerHTML = `
+    <div class="card"><div class="card-title">符合條件樣本數</div><div class="card-val">${st.total_count || 0}</div></div>
+    <div class="card"><div class="card-title">檢出陽性病原 (陽性率)</div><div class="card-val" style="color:var(--primary);">${st.positive_count || 0} <span style="font-size:14px;">(${st.positive_rate_pct || 0}%)</span></div></div>
+    <div class="card"><div class="card-title">未檢出主要病原</div><div class="card-val">${st.negative_count || 0}</div></div>
+    <div class="card"><div class="card-title">涵蓋日期數</div><div class="card-val">${(st.by_date || []).length}</div></div>
+  `;
+
+  const curQ = document.getElementById('f-q').value.trim().toLowerCase();
+  const paths = st.top_pathogens || [];
+  const maxP = paths.length ? Math.max(...paths.map(p => p.count)) : 1;
+  document.getElementById('cohort-pathogens').innerHTML = paths.length ? paths.map(p => {
+    const active = curQ && curQ === p.name.toLowerCase();
+    return `
+    <div style="margin-bottom:7px;cursor:pointer;padding:4px 6px;border-radius:6px;${active ? 'background:#eff6ff;outline:1px solid var(--primary);' : ''}" onclick="filterByPathogen('${p.name.replace(/'/g, "\\'")}')">
+      <div style="display:flex;justify-content:space-between;"><span><strong>${p.name}</strong>${active ? ' <span class="badge b-run">已篩選 · 再點一次取消</span>' : (curQ ? ' <span class="badge" style="background:#f1f5f9;color:#475569;">共同檢出</span>' : '')}</span><span>${p.count} 筆 (${p.pct}%)</span></div>
+      <div style="background:#e2e8f0;height:7px;border-radius:4px;overflow:hidden;margin-top:2px;">
+        <div style="background:var(--primary);height:100%;width:${Math.round(100 * p.count / maxP)}%;"></div>
+      </div>
+    </div>`;
+  }).join('') : '<span style="color:var(--muted);">目前篩選條件下無主要病原檢出紀錄</span>';
+
+  lastByPeriod = st.by_period || { day: st.by_date || [] };
+  renderTrendPanel();
+
+  const dedupNote = st.dedup_removed ? `（已依 Sample ID 去重，排除 ${st.dedup_removed} 筆重複）` : '';
+  document.getElementById('res-match-info').textContent = `共 ${res.total_matched || 0} 筆${dedupNote}`;
+  document.getElementById('res-page-info').textContent = `第 ${res.page} / ${resTotalPages} 頁（每頁 25 筆）`;
+
+  const items = res.items || [];
+  if (activeResultJobId !== null && !items.some(j => String(j.id) === String(activeResultJobId))) {
+    closeSampleResult();
+  }
+  document.getElementById('res-tbody').innerHTML = items.length ? items.map(j => `<tr>
+    <td>${j.id}</td>
+    <td><strong>${j.sample_id}</strong></td>
+    <td>${j.specimen_type || ''}</td>
+    <td>${statusBadge(j.status, j.error_msg)}</td>
+    <td style="font-size:11.5px;color:#475569;">送: ${fmtTs(j.created_at)}<br>完: ${fmtTs(j.finished_at)}</td>
+    <td style="font-size:12px;">${j.primary_finding || j.error_msg || '-'}</td>
+    <td><div style="display:inline-flex;gap:6px;white-space:nowrap;">${j.status === 'completed' ? `<button class="btn btn-sm btn-icon" onclick="loadSampleResult(${j.id})" title="檢視詳細報告"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}${j.status !== 'running' ? `<button class="btn btn-sm btn-danger btn-icon" onclick="deleteJob(${j.id},'${escHtml(j.sample_id)}')" title="刪除"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>` : ''}</div></td>
+  </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);">無符合條件的資料</td></tr>';
+}
+
+async function loadSampleResult(sid) {
+  if (!sid) return;
+  const res = await fetch('/api/results/' + encodeURIComponent(sid)).then(r => r.json());
+  if (!res || !res.job) return;
+  activeResultJobId = res.job.id;
+  const resBody = document.getElementById('res-body');
+  resBody.classList.remove('hidden');
+  document.getElementById('res-active-title').textContent = `#${res.job.id} ${res.job.sample_id} (${fmtTs(res.job.finished_at || res.job.created_at)})`;
+  setTimeout(() => {
+    resBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const hdrPanel = resBody.querySelector('.panel');
+    if (hdrPanel) {
+      hdrPanel.style.transition = 'box-shadow 0.35s ease';
+      hdrPanel.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.35)';
+      setTimeout(() => { hdrPanel.style.boxShadow = ''; }, 1400);
+    }
+  }, 60);
+  const f = res.files || {};
+  document.getElementById('frame-sankey').src = f.sankey_html || 'about:blank';
+  document.getElementById('frame-validation').src = f.validation_html || 'about:blank';
+  document.getElementById('frame-kraken2').src = f.kraken2_html || 'about:blank';
+
+  const dl = [];
+  dl.push(`<a class="btn btn-sm" style="background:#0f172a;color:#fff;" href="/api/results/${res.job.id}/full-report?print=1" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>下載完整報告 PDF</a>`);
+  if (f.consensus_fasta) dl.push(`<a class="btn btn-sm" href="${f.consensus_fasta}" download>下載 Consensus FASTA</a>`);
+  if (f.disposition_tsv) dl.push(`<a class="btn btn-sm btn-ghost" href="${f.disposition_tsv}" download>判定明細 TSV</a>`);
+  if (f.species_tsv) dl.push(`<a class="btn btn-sm btn-ghost" href="${f.species_tsv}" download>物種驗證 TSV</a>`);
+  if (f.unknown_tsv) dl.push(`<a class="btn btn-sm btn-ghost" href="${f.unknown_tsv}" download>DIAMOND 篩檢 TSV</a>`);
+  document.getElementById('download-links').innerHTML = dl.join('');
+
+  renderDispositionCards(res.disposition_rows, res.unknown_rows);
+  renderDispositionTable('disp-table', res.disposition_rows);
+  renderSimpleTable('unk-table', res.unknown_rows);
+}
+
+function renderDispositionCards(dispRows, unkRows) {
+  const box = document.getElementById('disp-summary-cards');
+  if (!box) return;
+  if (!dispRows || !dispRows.length) {
+    box.innerHTML = '<div class="muted">尚無序列判定摘要資料</div>';
+    return;
+  }
+  let totalRaw = 0, hostRemoved = 0, qcFailed = 0, pathogenReads = 0, bgReads = 0;
+  const libTotals = {};
+  const pathDetails = [];
+  dispRows.forEach(r => {
+    const reads = Number(r.reads || 0);
+    const lib = r.library || 'Unknown';
+    const cat = r.final_category || '';
+    const interp = r.interpretation || '';
+    totalRaw += reads;
+    libTotals[lib] = (libTotals[lib] || 0) + reads;
+    if (cat === 'QC_Failed') qcFailed += reads;
+    else if (cat === 'Host_Removed' || cat.includes('Residual_Human')) hostRemoved += reads;
+    else if (cat === 'NonHost_Pathogen_Mapped' || interp.includes('Confirmed')) {
+      pathogenReads += reads;
+      if (reads > 0) pathDetails.push(`${lib}: ${interp.replace('Confirmed ', '')} (${reads.toLocaleString()})`);
+    } else {
+      bgReads += reads;
+    }
+  });
+  const hostPct = totalRaw ? (hostRemoved / totalRaw * 100).toFixed(1) : '0.0';
+  const qcPct = totalRaw ? (qcFailed / totalRaw * 100).toFixed(1) : '0.0';
+  const pathPct = totalRaw ? (pathogenReads / totalRaw * 100).toFixed(3) : '0.000';
+  const libDesc = Object.entries(libTotals).map(([k, v]) => `${escHtml(k)}: ${v.toLocaleString()}`).join(' · ');
+  const unkCount = (unkRows || []).length;
+  const unkNote = unkCount
+    ? `檢出 ${unkCount} 筆遠緣蛋白命中（Top: ${escHtml(String(unkRows[0].stitle || unkRows[0].sseqid || '').slice(0, 48))}）`
+    : '未檢出顯著新型或遠緣病毒蛋白訊號';
+
+  const cardStyle = (border) => `background:#fff;border:1px solid #e2e8f0;border-left:4px solid ${border};border-radius:8px;padding:12px 14px;`;
+  box.innerHTML = `
+    <div style="${cardStyle('#2563eb')}">
+      <div style="font-size:11.5px;color:#64748b;font-weight:600;">原始定序總讀段</div>
+      <div style="font-size:20px;font-weight:700;margin:4px 0;color:#0f172a;">${totalRaw.toLocaleString()}</div>
+      <div style="font-size:12px;color:#475569;">${libDesc}</div>
+    </div>
+    <div style="${cardStyle('#0284c7')}">
+      <div style="font-size:11.5px;color:#64748b;font-weight:600;">人類宿主與 QC 過濾</div>
+      <div style="font-size:20px;font-weight:700;margin:4px 0;color:#0f172a;">${hostPct}% 宿主移除</div>
+      <div style="font-size:12px;color:#475569;">宿主 ${hostRemoved.toLocaleString()} · QC 淘汰 ${qcFailed.toLocaleString()} (${qcPct}%)</div>
+    </div>
+    <div style="${cardStyle(pathogenReads > 0 ? '#16a34a' : '#64748b')};${pathogenReads > 0 ? 'background:#f0fdf4;' : ''}">
+      <div style="font-size:11.5px;color:#64748b;font-weight:600;">確認病原體歸屬</div>
+      <div style="font-size:20px;font-weight:700;margin:4px 0;color:${pathogenReads > 0 ? '#166534' : '#0f172a'};">${pathogenReads.toLocaleString()} reads (${pathPct}%)</div>
+      <div style="font-size:12px;color:#475569;">${pathDetails.length ? escHtml(pathDetails.slice(0, 2).join('；')) : '無確認病原體讀段'}</div>
+    </div>
+    <div style="${cardStyle(unkCount > 0 ? '#d97706' : '#64748b')}">
+      <div style="font-size:11.5px;color:#64748b;font-weight:600;">背景與未知病毒篩檢</div>
+      <div style="font-size:20px;font-weight:700;margin:4px 0;color:#0f172a;">${unkCount > 0 ? `${unkCount} 筆待評估` : '無新型病毒'}</div>
+      <div style="font-size:12px;color:#475569;">背景/未分類 ${bgReads.toLocaleString()} · ${unkNote}</div>
+    </div>
+  `;
+}
+
+function renderDispositionTable(id, rows) {
+  const tbl = document.getElementById(id);
+  if (!rows || !rows.length) { tbl.innerHTML = '<tr><td>無資料</td></tr>'; return; }
+  const hasLibPct = Object.prototype.hasOwnProperty.call(rows[0], 'pct_of_library');
+  const hdr = `<thead><tr><th>Library</th><th>分類項目</th><th>判定方法</th><th>臨床／生物意義</th><th style="text-align:right;">Reads</th>${hasLibPct ? '<th style="text-align:right;">佔該 Library</th>' : ''}<th style="text-align:right;">佔總 Raw</th></tr></thead>`;
+  const body = rows.map(r => {
+    const cat = String(r.final_category || '');
+    const interp = String(r.interpretation || '');
+    const reads = Number(r.reads || 0);
+    const isPath = cat === 'NonHost_Pathogen_Mapped' || interp.includes('Confirmed');
+    const isHost = cat === 'Host_Removed' || cat.includes('Residual_Human');
+    const isQc = cat === 'QC_Failed';
+    const badge = isPath
+      ? '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;background:#dcfce7;color:#166534;margin-right:6px;">病原體</span>'
+      : isHost
+      ? '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;background:#e0f2fe;color:#075985;margin-right:6px;">宿主</span>'
+      : isQc
+      ? '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;margin-right:6px;">QC淘汰</span>'
+      : '<span style="display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e;margin-right:6px;">背景/其他</span>';
+    const rowBg = isPath && reads > 0 ? ' style="background:#f0fdf4;font-weight:600;"' : '';
+    const pctLibCell = hasLibPct ? `<td style="text-align:right;font-variant-numeric:tabular-nums;">${Number(r.pct_of_library || 0).toFixed(2)}%</td>` : '';
+    const pctTot = Number(r.pct_of_total_raw || 0).toFixed(2);
+    return `<tr${rowBg}><td>${escHtml(r.library || '')}</td><td>${badge}<code>${escHtml(cat)}</code></td><td>${escHtml(r.method || '')}</td><td>${escHtml(interp)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${reads.toLocaleString()}</td>${pctLibCell}<td style="text-align:right;font-variant-numeric:tabular-nums;">${pctTot}%</td></tr>`;
+  }).join('');
+  tbl.innerHTML = `${hdr}<tbody>${body}</tbody>`;
+  delete tbl.dataset.sortBound;
+  makeTableSortable(tbl);
+}
+
+function renderSimpleTable(id, rows) {
+  const tbl = document.getElementById(id);
+  if (!rows || !rows.length) { tbl.innerHTML = '<tr><td>無資料</td></tr>'; return; }
+  const cols = Object.keys(rows[0]);
+  tbl.innerHTML = `<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>` +
+    `<tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${r[c]}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  delete tbl.dataset.sortBound;
+  makeTableSortable(tbl);
+}
+
+function makeTableSortable(tbl) {
+  if (!tbl || tbl.dataset.sortBound || tbl.querySelector('th[data-k]')) return;
+  let ths = tbl.querySelectorAll('thead th');
+  if (!ths.length) ths = tbl.querySelectorAll('tr:first-child th');
+  if (!ths.length) return;
+  tbl.dataset.sortBound = '1';
+  ths.forEach((th, colIdx) => {
+    const label = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+    if (!label || label === '操作') return;
+    th.classList.add('sortable');
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.dataset.origLabel = th.dataset.origLabel || label;
+    th.onclick = () => {
+      const tbody = tbl.querySelector('tbody') || tbl;
+      if (!tbody) return;
+      const asc = th.dataset.sortDir !== 'asc';
+      ths.forEach(h => {
+        h.dataset.sortDir = '';
+        if (h.dataset.origLabel) h.textContent = h.dataset.origLabel;
+      });
+      th.dataset.sortDir = asc ? 'asc' : 'desc';
+      th.textContent = th.dataset.origLabel + (asc ? ' ▲' : ' ▼');
+      const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('th'));
+      const parseVal = (td) => {
+        const raw = (td ? td.textContent : '').trim();
+        const cleaned = raw.replace(/^#/, '').replace(/[,%\sx×]/gi, '');
+        if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(cleaned) && cleaned !== '') {
+          return { num: parseFloat(cleaned), isNum: true, raw };
+        }
+        return { num: 0, isNum: false, raw };
+      };
+      rows.sort((a, b) => {
+        const va = parseVal(a.children[colIdx]);
+        const vb = parseVal(b.children[colIdx]);
+        if (va.isNum && vb.isNum) return asc ? (va.num - vb.num) : (vb.num - va.num);
+        return asc ? va.raw.localeCompare(vb.raw, 'zh-Hant') : vb.raw.localeCompare(va.raw, 'zh-Hant');
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    };
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  makeTableSortable(document.getElementById('res-tbody')?.closest('table'));
+  makeTableSortable(document.getElementById('jobs-tbody')?.closest('table'));
+});
+
+function autoResizeFrame(iframe) {
+  if (!iframe) return;
+  const adjust = () => {
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!doc || !doc.body) return;
+      doc.documentElement.style.overflow = 'hidden';
+      doc.body.style.overflow = 'hidden';
+      if (doc.head && !doc.getElementById('cdc-sort-css')) {
+        const st = doc.createElement('style');
+        st.id = 'cdc-sort-css';
+        st.textContent = 'th.sortable:hover{background:#e2e8f0 !important;}';
+        doc.head.appendChild(st);
+      }
+      doc.querySelectorAll('table').forEach(t => makeTableSortable(t));
+      const bottoms = Array.from(doc.body.children)
+        .filter(el => el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE')
+        .map(el => el.getBoundingClientRect().bottom);
+      const contentH = bottoms.length ? Math.ceil(Math.max(...bottoms)) : doc.body.scrollHeight;
+      if (contentH > 100) iframe.style.height = (contentH + 20) + 'px';
+    } catch (e) {}
+  };
+  adjust();
+  setTimeout(adjust, 250);
+  setTimeout(adjust, 800);
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    if (doc && doc.body && window.ResizeObserver && !iframe._roAttached) {
+      new ResizeObserver(adjust).observe(doc.body);
+      iframe._roAttached = true;
+    }
+  } catch (e) {}
+}
+
+function switchReportTab(name, btn) {
+  ['sankey','validation','kraken2','tables'].forEach(t => document.getElementById('rtab-' + t).classList.add('hidden'));
+  document.getElementById('rtab-' + name).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (name !== 'tables') {
+    const fr = document.getElementById('frame-' + name);
+    try { if (fr && fr.contentWindow) fr.contentWindow.dispatchEvent(new Event('resize')); } catch (e) {}
+    autoResizeFrame(fr);
+  }
+}
+
+let browseTargetInput = null;
+let browseMode = 'any';
+let browseParentPath = '/';
+
+async function openBrowser(targetId, mode) {
+  browseTargetInput = targetId;
+  browseMode = mode || 'any';
+  const m = document.getElementById('browse-modal');
+  m.classList.remove('hidden');
+  m.style.display = 'flex';
+  const curVal = document.getElementById(targetId).value.trim();
+  await browseLoad(curVal);
+}
+
+function closeBrowser() {
+  const m = document.getElementById('browse-modal');
+  m.classList.add('hidden');
+  m.style.display = 'none';
+}
+
+async function browseLoad(reqPath) {
+  const q = reqPath ? ('?path=' + encodeURIComponent(reqPath)) : '';
+  const data = await fetch('/api/browse' + q).then(r => r.json());
+  document.getElementById('browse-cur-path').value = data.current_path;
+  browseParentPath = data.parent_path || '/';
+
+  document.getElementById('browse-shortcuts').innerHTML = (data.quick_roots || []).map(s =>
+    `<button class="btn btn-sm btn-ghost" onclick="browseLoad('${s.path.replace(/'/g, "\\'")}')">${s.label}</button>`
+  ).join('');
+
+  const dirRows = (data.dirs || []).map(d =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #f1f5f9;">
+       <span style="cursor:pointer;color:#1d4ed8;font-weight:500;" onclick="browseLoad('${d.path.replace(/'/g, "\\'")}')">📁 ${d.name}</span>
+       <button class="btn btn-sm btn-ghost" onclick="selectBrowsePath('${d.path.replace(/'/g, "\\'")}')">選取目錄</button>
+     </div>`
+  ).join('');
+
+  const fileRows = browseMode === 'dir' ? '' : (data.files || []).map(f =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #f1f5f9;">
+       <span>🧬 ${f.name} <code style="margin-left:6px;">${f.size}</code></span>
+       <button class="btn btn-sm" onclick="selectBrowsePath('${f.path.replace(/'/g, "\\'")}')">選取檔案</button>
+     </div>`
+  ).join('');
+
+  document.getElementById('browse-list').innerHTML = (dirRows + fileRows) || '<div style="color:#64748b;padding:12px 0;">此目錄無子目錄或 FASTQ 檔案</div>';
+}
+
+function browseGoParent() {
+  browseLoad(browseParentPath);
+}
+
+function selectBrowsePath(p) {
+  if (browseTargetInput) {
+    document.getElementById(browseTargetInput).value = p;
+    if (browseTargetInput === 'scan-dir-input') scanInputs();
+  }
+  closeBrowser();
+}
+
+async function loadAll() {
+  await Promise.all([loadHealth(), loadJobs(), scanInputs()]);
+}
+loadAll();
+setInterval(loadJobs, 5000);
+
+let panelCatalogCache = [];
+async function openPanelCatalog() {
+  const m = document.getElementById('panel-modal');
+  m.style.display = 'flex';
+  if (!panelCatalogCache.length) {
+    const res = await fetch('/api/pathogen-panel').then(r => r.json());
+    panelCatalogCache = res.items || [];
+  }
+  renderPanelCatalog();
+}
+function closePanelCatalog() {
+  document.getElementById('panel-modal').style.display = 'none';
+}
+function renderPanelCatalog() {
+  const q = (document.getElementById('panel-search').value || '').trim().toLowerCase();
+  const rows = q ? panelCatalogCache.filter(r =>
+    `${r.taxid} ${r.organism} ${r.assembly} ${r.description}`.toLowerCase().includes(q)
+  ) : panelCatalogCache;
+  document.getElementById('panel-count').textContent = `顯示 ${rows.length} / ${panelCatalogCache.length} 株`;
+  document.getElementById('panel-tbody').innerHTML = rows.map(r => `<tr>
+    <td><code>${r.taxid || '-'}</code></td>
+    <td><em><strong>${r.organism}</strong></em></td>
+    <td><code>${r.assembly}</code></td>
+    <td>${r.contigs}</td>
+    <td>${r.size_mb} MB</td>
+    <td style="font-size:12px;color:#475569;">${r.description}</td>
+  </tr>`).join('');
+}
+</script>
+
+<div id="cohort-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.58);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fff;border-radius:12px;max-width:1160px;width:100%;height:88vh;display:flex;flex-direction:column;padding:16px 20px;box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+      <h2 style="margin:0;border:none;padding:0;font-size:17px;">群體統計報告預覽</h2>
+      <div class="row-flex">
+        <button class="btn btn-sm" onclick="exportCohortReport('csv', true)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>存檔 CSV</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportCohortReport('tsv', true)">存檔 TSV</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportCohortReport('html', true)">另存 HTML</button>
+        <button class="btn btn-sm btn-ghost" onclick="try{document.getElementById('cohort-modal-frame').contentWindow.print();}catch(e){}">列印 / PDF</button>
+        <button class="btn btn-sm btn-ghost" onclick="closeCohortModal()">關閉</button>
+      </div>
+    </div>
+    <iframe id="cohort-modal-frame" style="flex:1;width:100%;border:1px solid var(--border);border-radius:8px;background:#fff;"></iframe>
+  </div>
+</div>
+
+<div id="panel-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:999;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fff;border-radius:12px;max-width:1050px;width:100%;max-height:86vh;display:flex;flex-direction:column;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 style="margin:0;border:none;padding:0;">Offline Pathogen Panel 參考基因組表列清單</h2>
+      <button class="btn btn-sm btn-ghost" onclick="closePanelCatalog()">關閉</button>
+    </div>
+    <div class="row-flex" style="margin-bottom:12px;">
+      <input id="panel-search" type="search" placeholder="搜尋物種、TaxID、Assembly..." style="min-width:280px;" oninput="renderPanelCatalog()">
+      <span id="panel-count" style="font-size:12.5px;color:#64748b;"></span>
+      <div style="margin-left:auto;" class="row-flex">
+        <a class="btn btn-sm btn-ghost" href="/files/references/pathogen_panel/PANEL_CATALOG.tsv" download>下載 TSV</a>
+        <a class="btn btn-sm btn-ghost" href="/files/references/pathogen_panel/PANEL_CATALOG.md" download>下載 Markdown</a>
+      </div>
+    </div>
+    <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+      <table>
+        <thead><tr><th>TaxID</th><th>物種名稱</th><th>Assembly</th><th>Contigs</th><th>大小</th><th>序列說明</th></tr></thead>
+        <tbody id="panel-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+

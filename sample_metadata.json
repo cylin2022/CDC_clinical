@@ -1,0 +1,37 @@
+{
+  "sample_id": "sample_001",
+  "sample_id_status": "local placeholder; original specimen ID not supplied",
+  "biological_samples": 1,
+  "pool_id": "pool_001",
+  "pooling": "DNA and cDNA libraries mixed at equal fmole",
+  "libraries": {
+    "SG26-GS01": {
+      "barcode": "NB17",
+      "directory": "barcode17",
+      "type": "DNA"
+    },
+    "ST26-UM01": {
+      "barcode": "NB18",
+      "directory": "barcode18",
+      "type": "cDNA"
+    }
+  },
+  "sequencing_replicates": 2,
+  "replicate_type": "technical; same pooled library",
+  "reported_flowcells": [
+    "PS010",
+    "PS011"
+  ],
+  "file_run_ids": [
+    "PBE34168",
+    "PBI71026"
+  ],
+  "flowcell_alias_mapping": null,
+  "specimen_type": null,
+  "negative_control": "none available (confirmed by user 2026-11-12)",
+  "notes": [
+    "No mapping between PS010/PS011 and file run IDs has been assumed.",
+    "Equal fmole pooling does not imply equal read count or comparable microbial abundance between DNA and cDNA.",
+    "No negative/extraction/NTC control or other barcodes from the same runs are available; contaminant assessment relies on literature lists, replicate consistency and genome-coverage evidence."
+  ]
+}
