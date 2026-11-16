@@ -806,9 +806,9 @@ def get_sample_result_bundle(sample_or_job_id):
     return {
         "job": job,
         "files": files,
-        "disposition_rows": read_tsv(candidates["disposition_tsv"], 50),
-        "species_rows": read_tsv(candidates["species_tsv"], 50),
-        "unknown_rows": read_tsv(candidates["unknown_tsv"], 20),
+        "disposition_rows": read_tsv(candidates["disposition_tsv"], 200),
+        "species_rows": read_tsv(candidates["species_tsv"], 200),
+        "unknown_rows": read_tsv(candidates["unknown_tsv"], 500),
     }
 
 

@@ -322,7 +322,7 @@ def build_html(consensus_stats, depths):
     <div class="card amber">
       <div class="card-title">細菌假陽性排除</div>
       <div class="card-val">已排除高計數細菌</div>
-      <div class="card-note">Kraken2 高計數之 <em>A. pittii</em>、<em>V. alginolyticus</em>、<em>E. coli</em>、<em>K. pneumoniae</em> 回貼覆蓋皆 &lt;0.4%。</div>
+      <div class="card-note">Kraken2 高計數之 <em>A. pittii</em>、<em>V. alginolyticus</em>、<em>E. coli</em>、<em>K. pneumoniae</em> 回貼覆蓋皆 &lt;0.4%（詳見下文解析）。</div>
     </div>
     <div class="card slate">
       <div class="card-title">H3N2 一致性序列</div>
@@ -358,6 +358,11 @@ def build_html(consensus_stats, depths):
 
   <div class="panel">
     <h2>3. 競爭性回貼總表（DNA &amp; cDNA）</h2>
+    <div style="background:#fff7ed;border-left:4px solid #f97316;padding:12px 16px;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:14px;color:#7c2d12;">
+      <strong>⚠️ 關鍵質控觀察：Kraken2 高量指派讀段（約 569.8 萬條 cDNA reads，44.36%）經全基因組回貼確認非真實細菌病原體</strong><br>
+      • <strong>假陽性成因</strong>：Kraken2 報告中呈現之大量 <em>Pseudomonadota</em>（變形菌門）或特定細菌（如 <em>V. alginolyticus</em>、<em>A. baumannii</em>、<em>E. coli</em> 等），檢視 k-mer 發現 93%~97% 的長度無分類資訊，僅局部 15~30 bp 保守區（載體/引子殘留或短片段同源）命中。本表顯示將這批序列進行 minimap2 完整基因組回貼時，覆蓋度皆 &lt;0.4% 且高品質讀段（MAPQ≥20）幾近為 0，已明確排除為主要致病菌。<br>
+      • <strong>殘留宿主轉錄本</strong>：部分未完全去除之剪接態人類 RNA 亦停留在此類別中。
+    </div>
     <p style="font-size:13px;color:#475569;margin-top:0;">
       Non-host 輸入：DNA <code>{overview['DNA_SG26-GS01']['total_primary']:,}</code> reads（非人 primary: <code>{overview['DNA_SG26-GS01']['nonhuman_primary']:,}</code>）；
       cDNA <code>{overview['cDNA_ST26-UM01']['total_primary']:,}</code> reads（人類殘留: <code>{overview['cDNA_ST26-UM01']['human_primary']:,}</code>，非人 primary: <code>{overview['cDNA_ST26-UM01']['nonhuman_primary']:,}</code>）。

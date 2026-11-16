@@ -152,10 +152,11 @@ th{background:#f1f5f9;cursor:pointer;position:sticky;top:0}td:first-child,th:fir
 <label>報告 <select id="skReport"></select></label>
 <label>Top 物種數 <input id="skTop" type="number" value="25" min="5" max="200" step="5" style="width:70px"></label>
 <label>物種最少 reads <input id="skMin" type="number" value="3" min="1" style="width:70px"></label>
+<label>流量尺度 <select id="skScale"><option value="sqrt" selected>平滑縮放 (Square-root，推薦)</option><option value="log">對數尺度 (Log10)</option><option value="linear">線性比例 (Linear，原值)</option></select></label>
 <label><input id="skHuman" type="checkbox" checked>排除 Homo sapiens</label>
 <label><input id="skContam" type="checkbox">排除常見污染屬</label>
 <span>階層：</span><span id="skRanks"></span></div>
-<p class="muted">流量＝所選 Top 物種的 clade reads 往上加總；節點滑鼠停留可看該分類群在報告中的實際 clade reads。顏色依 domain：細菌藍、病毒紅、真核綠、古菌紫。</p>
+<p class="muted">流量＝所選 Top 物種的 reads 往上加總。平滑縮放與對數尺度能平衡巨大優勢種與微量病原體之頻寬，點選或懸停節點可查看真實 reads 數與佔比。顏色依 domain：細菌藍、病毒紅、真核綠、古菌紫。</p>
 <div id="sankey" style="height:760px"></div></section>
 
 <section id="s-heat"><h2>物種熱圖（跨報告）</h2>
@@ -210,7 +211,7 @@ function tags(t){ const f=F[t]||{}; let h=f.contam?'<span class="tag c">常見�
   const x=S.map(s=>`${s.library_type} · ${s.run_id}`);
   const tr=(k,name,c)=>({type:'bar',name,x,y:S.map(s=>+s[k]),marker:{color:c},hovertemplate:'%{x}<br>'+name+': %{y:,}<extra></extra>'});
   Plotly.newPlot('qcBar',[tr('raw_reads','Raw','#94a3b8'),tr('qc_reads','QC 後','#60a5fa'),tr('nonhost_reads','非人類','#f97316')],
-    {barmode:'group',yaxis:{type:'log',title:'reads'},margin:{t:24,l:70,r:160,b:60},legend:{orientation:'v',x:1.02,y:1}},cfg);
+    {barmode:'group',yaxis:{type:'log',title:'reads'},margin:{t:55,l:70,r:30,b:60},legend:{orientation:'h',y:1.15,x:0.5,xanchor:'center',yanchor:'bottom'}},cfg);
   let h='<table><tr><th class="l">來源</th><th>Raw reads</th><th>Raw bases</th><th>QC 後</th><th>移除人類</th><th>非人類 reads</th><th>非人類 %</th><th>非人類 bases</th></tr>';
   S.forEach((s,i)=>{h+=`<tr><td>${x[i]}<br><span class="muted">${s.library_id}</span></td><td>${fmt(+s.raw_reads)}</td><td>${fmt(+s.raw_bases)}</td><td>${fmt(+s.qc_reads)}</td><td>${fmt(+s.host_removed_reads)}</td><td>${fmt(+s.nonhost_reads)}</td><td>${pct(+s.nonhost_reads,+s.qc_reads).toFixed(2)}%</td><td>${fmt(+s.nonhost_bases)}</td></tr>`;});
   document.getElementById('qcTable').innerHTML=h+'</table>';
@@ -224,7 +225,7 @@ function tags(t){ const f=F[t]||{}; let h=f.contam?'<span class="tag c">常見�
   const mk=(y,name,c,abs)=>({type:'bar',name,x,y:y.map((v,i)=>pct(v,R[i].total)),customdata:y,marker:{color:c},
     hovertemplate:'%{x}<br>'+name+': %{customdata:,} reads (%{y:.2f}%)<extra></extra>'});
   Plotly.newPlot('clsBar',[mk(cls,'已分類（非人類）','#2563eb'),mk(human,'殘留 Homo sapiens','#a3a3a3'),mk(R.map(r=>r.unclassified),'未分類','#e5e7eb')],
-    {barmode:'stack',yaxis:{title:'% of non-host reads',range:[0,100]},margin:{t:24,l:60,r:170,b:80},legend:{orientation:'v',x:1.02,y:1}},cfg);
+    {barmode:'stack',yaxis:{title:'% of non-host reads',range:[0,100]},margin:{t:55,l:60,r:30,b:80},legend:{orientation:'h',y:1.15,x:0.5,xanchor:'center',yanchor:'bottom'}},cfg);
 })();
 
 // Sankey ----------------------------------------------------------------
@@ -234,6 +235,7 @@ const ALL_RANKS=['D','P','C','O','F','G','S'], DEFAULT_RANKS=new Set(['D','P','F
 function drawSankey(){
   const rep=R[+document.getElementById('skReport').value];
   const top=+document.getElementById('skTop').value, min=+document.getElementById('skMin').value;
+  const scaleMode=(document.getElementById('skScale')?document.getElementById('skScale').value:'sqrt');
   const exH=document.getElementById('skHuman').checked, exC=document.getElementById('skContam').checked;
   const ranks=new Set([...document.querySelectorAll('#skRanks input:checked')].map(e=>e.value)); ranks.add('S');
   let sp=speciesOf(rep).filter(n=>n.c>=min && !(exH&&isHuman(n)) && !(exC&&isContam(n))).sort((a,b)=>b.c-a.c).slice(0,top);
@@ -248,13 +250,24 @@ function drawSankey(){
     chain.forEach(k=>{ const n=rep.nodes[k]; const cur=nodeId(k,n.n,dom,n.c,n.r);
       const key=prev+'>'+cur; links.set(key,(links.get(key)||0)+s.c); prev=cur; });
   });
-  const L=[...links.entries()].map(([k,v])=>{const [a,b]=k.split('>').map(Number);return {a,b,v};});
+
+  const transformVal=(v)=>{
+    if(scaleMode==='sqrt') return Math.max(1, Math.round(Math.sqrt(v)*10));
+    if(scaleMode==='log') return Math.max(1, Math.round(Math.log10(v+1)*100));
+    return v;
+  };
+
+  const L=[...links.entries()].map(([k,rawV])=>{
+    const [a,b]=k.split('>').map(Number);
+    return {a, b, rawV, v: transformVal(rawV)};
+  });
   const hex2rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;};
-  Plotly.react('sankey',[{type:'sankey',arrangement:'snap',valueformat:',d',
-    node:{label:labels,color:colors,customdata:custom,pad:10,thickness:16,line:{width:0},
-      hovertemplate:'%{label}<br>%{customdata[1]}<br>clade reads（報告）: %{customdata[0]}<br>Sankey 流量: %{value:,}<extra></extra>'},
-    link:{source:L.map(l=>l.a),target:L.map(l=>l.b),value:L.map(l=>l.v),color:L.map(l=>hex2rgba(colors[l.b],0.35)),
-      hovertemplate:'%{source.label} → %{target.label}<br>%{value:,} reads<extra></extra>'}}],
+  Plotly.react('sankey',[{type:'sankey',arrangement:'snap',
+    node:{label:labels,color:colors,customdata:custom,pad:14,thickness:18,line:{width:0},
+      hovertemplate:'%{label}<br>%{customdata[1]}<br>真實 clade reads: %{customdata[0]}<extra></extra>'},
+    link:{source:L.map(l=>l.a),target:L.map(l=>l.b),value:L.map(l=>l.v),customdata:L.map(l=>fmt(l.rawV)),
+      color:L.map(l=>hex2rgba(colors[l.b],0.35)),
+      hovertemplate:'%{source.label} → %{target.label}<br>真實讀段數: %{customdata} reads<extra></extra>'}}],
     {margin:{t:10,l:10,r:10,b:10},font:{size:11},
      annotations: sp.length?[]:[{text:'沒有符合條件的物種',showarrow:false,x:0.5,y:0.5,xref:'paper',yref:'paper'}]},cfg);
 }
@@ -321,7 +334,10 @@ document.getElementById('notes').innerHTML = `
 
 // wire up ---------------------------------------------------------------
 ['skReport','barReport'].forEach(fillSelect);
-['skReport','skTop','skMin','skHuman','skContam'].forEach(id=>document.getElementById(id).addEventListener('change',drawSankey));
+['skReport','skTop','skMin','skScale','skHuman','skContam'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('change',drawSankey);
+});
 document.getElementById('skRanks').addEventListener('change',drawSankey);
 ['hmTop','hmHuman','hmScale'].forEach(id=>document.getElementById(id).addEventListener('change',drawHeat));
 ['barReport','barTop','barHuman'].forEach(id=>document.getElementById(id).addEventListener('change',drawBar));

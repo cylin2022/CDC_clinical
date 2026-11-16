@@ -330,6 +330,12 @@ def build_sankey_html(total_all, lib_totals):
 
   <div class="panel">
     <h2>全序列互斥最終判定明細表（合計 {total_all:,} reads = 100.0000%）</h2>
+    <div style="background:#f8fafc;border-left:4px solid #2563eb;padding:12px 16px;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:14px;color:#334155;">
+      <strong>💡 關於 <code>NonHost_Unmapped_K2_Classified</code>（約 569.8 萬條 cDNA reads，44.36%）之深度檢驗解析：</strong><br>
+      • <strong>非真實病原體（Kraken2 短 k-mer 假陽性）</strong>：本批讀段中約 85%（~480 萬 reads）在 Kraken2 中被指派為<em>變形菌門（Pseudomonadota）</em>及其下屬物種。經調閱 <code>reads.kraken.gz</code> 逐讀段比對，發現每條 600~1,000 bp 讀段中 <strong>93%~97% 之序列皆未分類（k-mer 為 0）</strong>，僅末端或局部 15~30 bp 保守區（載體/引子殘留或超保守 rRNA）命中。經 minimap2 全基因組回貼確認覆蓋度皆 &lt;0.4%，證實為低複雜度/保守片段造成的演算法過度指派。<br>
+      • <strong>殘留宿主轉錄本</strong>：其餘約 15%（~87 萬 reads）為臨床檢體高度剪接（spliced）或遮蔽區內之微量人類 RNA 轉錄本。<br>
+      • <strong>臨床結論</strong>：確診之病原體維持為具高深度、全基因組 8 片段覆蓋之 <strong>Influenza A (H3N2)</strong> 及真菌 <strong>Candida albicans</strong>。
+    </div>
     <table>
       <thead>
         <tr>

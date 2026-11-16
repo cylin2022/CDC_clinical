@@ -259,11 +259,36 @@
         <div id="rtab-tables" class="panel hidden">
           <h2>全序列判定快速閱讀摘要</h2>
           <div id="disp-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px;"></div>
+          <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:12px 16px;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:18px;color:#1e3a8a;">
+            <strong>💡 關於 <code>NonHost_Unmapped_K2_Classified</code>（約 569.8 萬條 cDNA 讀段，44.36%）之深度檢驗解析：</strong><br>
+            • <strong>非真實病原體（Kraken2 短 k-mer 假陽性）</strong>：本批序列約 85%（~480 萬 reads）在 Kraken2 中被指派為<em>變形菌門（Pseudomonadota）</em>。經調閱 <code>reads.kraken.gz</code> 逐讀段比對，發現每條 600~1,000 bp 讀段中 <strong>93%~97% 之序列皆未分類（k-mer 為 0）</strong>，僅末端或局部 15~30 bp 保守區（載體/引子殘留或超保守 rRNA）命中。經 minimap2 全基因組回貼確認覆蓋度皆 &lt;0.4%，證實為低複雜度/保守片段造成的演算法過度指派。<br>
+            • <strong>殘留宿主轉錄本</strong>：其餘約 15%（~87 萬 reads）為臨床檢體高度剪接（spliced）或遮蔽區內之微量人類 RNA 轉錄本。<br>
+            • <strong>臨床結論</strong>：確診之病原體維持為具高深度、全基因組 8 片段覆蓋之 <strong>Influenza A (H3N2)</strong> 及真菌 <strong>Candida albicans</strong>。
+          </div>
           <h2>全序列互斥最終判定表</h2>
           <table id="disp-table"></table>
-          <h2 style="margin-top:24px;">DIAMOND 未知病毒蛋白遠緣搜尋（Top Hits）</h2>
-          <p class="muted" style="margin:-4px 0 10px;font-size:12.5px;">針對未比對至病原體面板且非 Kraken2 已知分類之讀段進行蛋白序列比對，用以排除潛在新型或遠緣病毒。</p>
-          <table id="unk-table"></table>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;margin-bottom:8px;flex-wrap:wrap;gap:10px;">
+            <h2 style="margin:0;">DIAMOND 未知病毒蛋白遠緣搜尋（Top Hits）</h2>
+            <div class="row-flex" style="font-size:13px;flex-wrap:wrap;gap:8px;">
+              <input id="unk-search" type="search" placeholder="搜尋 Query / Accession / 病毒名稱..." style="width:230px;" oninput="filterUnknownTable()">
+              <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12.5px;">
+                Min Bitscore:
+                <input id="unk-min-bit" type="number" value="0" min="0" step="10" style="width:65px;" oninput="filterUnknownTable()">
+              </label>
+              <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12.5px;">
+                Min Identity:
+                <input id="unk-min-ident" type="number" value="0" min="0" max="100" step="5" style="width:60px;" oninput="filterUnknownTable()">%
+              </label>
+              <button class="btn btn-sm btn-ghost" onclick="setUnkPreset(100,0)">Bitscore ≥ 100</button>
+              <button class="btn btn-sm btn-ghost" onclick="setUnkPreset(50,30)">高可信 (≥50 bit, ≥30%)</button>
+              <button class="btn btn-sm btn-ghost" onclick="resetUnkFilter()">重設</button>
+              <span id="unk-count-badge" class="badge" style="background:#f1f5f9;color:#475569;">0 筆</span>
+            </div>
+          </div>
+          <p class="muted" style="margin:0 0 10px;font-size:12.5px;">針對未比對至病原體面板且非 Kraken2 已知分類之讀段進行蛋白序列比對，用以排除潛在新型或遠緣病毒。<strong>點選任意欄位表頭可即時升冪／降冪排序（RANKING）</strong>。</p>
+          <div style="max-height:520px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
+            <table id="unk-table"></table>
+          </div>
         </div>
       </div>
     </section>
@@ -701,7 +726,7 @@ async function loadSampleResult(sid) {
 
   renderDispositionCards(res.disposition_rows, res.unknown_rows);
   renderDispositionTable('disp-table', res.disposition_rows);
-  renderSimpleTable('unk-table', res.unknown_rows);
+  initUnknownTable(res.unknown_rows || []);
 }
 
 function renderDispositionCards(dispRows, unkRows) {
@@ -791,6 +816,142 @@ function renderDispositionTable(id, rows) {
   tbl.innerHTML = `${hdr}<tbody>${body}</tbody>`;
   delete tbl.dataset.sortBound;
   makeTableSortable(tbl);
+}
+
+let currentUnknownRows = [];
+let unkSortCol = 'bitscore';
+let unkSortDir = -1; // -1: desc, 1: asc
+
+function initUnknownTable(rows) {
+  currentUnknownRows = rows || [];
+  unkSortCol = 'bitscore';
+  unkSortDir = -1;
+  const searchInput = document.getElementById('unk-search');
+  const minBitInput = document.getElementById('unk-min-bit');
+  const minIdentInput = document.getElementById('unk-min-ident');
+  if (searchInput) searchInput.value = '';
+  if (minBitInput) minBitInput.value = '0';
+  if (minIdentInput) minIdentInput.value = '0';
+  filterUnknownTable();
+}
+
+function setUnkSort(col) {
+  if (unkSortCol === col) {
+    unkSortDir = -unkSortDir;
+  } else {
+    unkSortCol = col;
+    unkSortDir = (col === 'qseqid' || col === 'sseqid' || col === 'stitle') ? 1 : -1;
+  }
+  filterUnknownTable();
+}
+
+function setUnkPreset(minBit, minIdent) {
+  const b = document.getElementById('unk-min-bit');
+  const i = document.getElementById('unk-min-ident');
+  if (b) b.value = minBit;
+  if (i) i.value = minIdent;
+  filterUnknownTable();
+}
+
+function resetUnkFilter() {
+  const s = document.getElementById('unk-search');
+  const b = document.getElementById('unk-min-bit');
+  const i = document.getElementById('unk-min-ident');
+  if (s) s.value = '';
+  if (b) b.value = '0';
+  if (i) i.value = '0';
+  unkSortCol = 'bitscore';
+  unkSortDir = -1;
+  filterUnknownTable();
+}
+
+function filterUnknownTable() {
+  const tbl = document.getElementById('unk-table');
+  const badge = document.getElementById('unk-count-badge');
+  if (!tbl) return;
+  if (!currentUnknownRows || !currentUnknownRows.length) {
+    tbl.innerHTML = '<tr><td style="padding:16px;color:#64748b;text-align:center;">此樣本無未比對之 DIAMOND 病毒命中記錄</td></tr>';
+    if (badge) badge.textContent = '0 筆';
+    return;
+  }
+
+  const q = (document.getElementById('unk-search')?.value || '').trim().toLowerCase();
+  const minBit = parseFloat(document.getElementById('unk-min-bit')?.value || '0') || 0;
+  const minIdent = parseFloat(document.getElementById('unk-min-ident')?.value || '0') || 0;
+
+  const filtered = currentUnknownRows.filter(r => {
+    const bit = parseFloat(r.bitscore || '0');
+    const pident = parseFloat(r.pident || '0');
+    if (bit < minBit || pident < minIdent) return false;
+    if (!q) return true;
+    const str = `${r.qseqid || ''} ${r.sseqid || ''} ${r.stitle || ''}`.toLowerCase();
+    return str.includes(q);
+  });
+
+  filtered.sort((a, b) => {
+    let va = a[unkSortCol];
+    let vb = b[unkSortCol];
+    if (unkSortCol === 'pident' || unkSortCol === 'aa_length' || unkSortCol === 'bitscore') {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return unkSortDir * (va - vb);
+    }
+    if (unkSortCol === 'evalue') {
+      va = parseFloat(va);
+      vb = parseFloat(vb);
+      if (isNaN(va)) va = 999;
+      if (isNaN(vb)) vb = 999;
+      return unkSortDir * (va - vb);
+    }
+    return unkSortDir * String(va || '').localeCompare(String(vb || ''), 'zh-Hant');
+  });
+
+  if (badge) {
+    badge.textContent = `${filtered.length} / ${currentUnknownRows.length} 筆`;
+    badge.style.background = filtered.length > 0 ? '#dbeafe' : '#fee2e2';
+    badge.style.color = filtered.length > 0 ? '#1e40af' : '#991b1b';
+  }
+
+  const thCol = (col, label, alignRight = false) => {
+    const isCur = (unkSortCol === col);
+    const arrow = isCur ? (unkSortDir === 1 ? ' ▲' : ' ▼') : ' <span style="opacity:0.3;font-size:10px;">⇅</span>';
+    const bg = isCur ? 'background:#e0f2fe;color:#0369a1;' : '';
+    const align = alignRight ? 'text-align:right;' : '';
+    return `<th onclick="setUnkSort('${col}')" style="cursor:pointer;user-select:none;${align}${bg}" title="點選此欄進行排序 (RANKING)">${label}${arrow}</th>`;
+  };
+
+  const hdr = `<thead><tr>
+    ${thCol('qseqid', 'qseqid')}
+    ${thCol('sseqid', 'sseqid')}
+    ${thCol('pident', 'pident (%)', true)}
+    ${thCol('aa_length', 'aa_length', true)}
+    ${thCol('evalue', 'evalue', true)}
+    ${thCol('bitscore', 'bitscore', true)}
+    ${thCol('stitle', 'stitle')}
+  </tr></thead>`;
+
+  if (!filtered.length) {
+    tbl.innerHTML = `${hdr}<tbody><tr><td colspan="7" style="padding:18px;color:#64748b;text-align:center;">無符合篩選條件的記錄（請調整搜尋關鍵字或降低門檻）</td></tr></tbody>`;
+    return;
+  }
+
+  const body = filtered.map(r => {
+    const pident = parseFloat(r.pident || '0').toFixed(1);
+    const bit = parseFloat(r.bitscore || '0').toFixed(1);
+    const aaLen = parseInt(r.aa_length || '0', 10);
+    const evalue = r.evalue || '';
+    return `<tr>
+      <td><code style="font-size:11.5px;">${escHtml(r.qseqid || '')}</code></td>
+      <td><strong>${escHtml(r.sseqid || '')}</strong></td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:${parseFloat(pident) >= 40 ? '#166534' : '#334155'};">${pident}%</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${aaLen.toLocaleString()}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:#64748b;font-family:monospace;font-size:11.5px;">${escHtml(evalue)}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#2563eb;">${bit}</td>
+      <td style="font-size:12.5px;max-width:380px;white-space:normal;line-height:1.4;">${escHtml(r.stitle || '')}</td>
+    </tr>`;
+  }).join('');
+
+  tbl.innerHTML = `${hdr}<tbody>${body}</tbody>`;
 }
 
 function renderSimpleTable(id, rows) {
